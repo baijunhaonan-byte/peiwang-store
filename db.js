@@ -1,15 +1,16 @@
 ﻿const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-const DIR = process.env.DATA_DIR || __dirname;
-const DATA_FILE = path.join(DIR, "data.json");
+const DIR = __dirname;
+const DATA_DIR = process.env.DATA_DIR || DIR;
+path.join(DATA_DIR, "data.json");
 
 try { require.resolve("better-sqlite3"); var SQLite = true; } catch { SQLite = false; }
 
 let db;
 if (SQLite) {
   const Database = require("better-sqlite3");
-  db = new Database(path.join(DIR, "peiwang.db"));
+  db = new Database(path.join(DATA_DIR, "peiwang.db"));
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   initSQLite();
