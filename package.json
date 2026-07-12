@@ -1,0 +1,13 @@
+{
+  "name": "peiwang-store",
+  "version": "1.0.0",
+  "description": "陪玩店网站 - 游戏护航/陪玩/代肝服务平台",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

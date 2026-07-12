@@ -1,0 +1,23 @@
+node_modules/
+uploads/*
+!uploads/.gitkeep
+data.json
+peiwang.db
+peiwang.db-wal
+peiwang.db-shm
+*.log
+.env
+
+# Large media files
+anqu01.mp4
+anqu.mp4
+anqu02.mp4
+anqu.m4a
+# Temp scripts
+fix*.js
+setup_deploy.js
+test-*.js
+test*.txt
+test*.png
+test*.jpg
+test-enc.txt
