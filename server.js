@@ -5,8 +5,9 @@ const crypto = require("crypto");
 const db = require("./db");
 
 const PORT = process.env.PORT || 3000;
-const DIR = process.env.DATA_DIR || __dirname;
-const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(DIR, "uploads");
+const DIR = __dirname;
+const DATA_DIR = process.env.DATA_DIR || DIR;
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(DATA_DIR, "uploads");
 
 // ======================== SSE 实时推送 ========================
 const sseClients = [];
@@ -400,7 +401,7 @@ async function handleAPI(req, res) {
 if (u.pathname === "/api/users" && method === "GET") {
     var au = getAuthUser(req);
     if (!au || au.role !== "admin") return json({ error: "无权限" }, 403);
-    var d = JSON.parse(fs.readFileSync(path.join(DIR, "data.json"), "utf8"));
+    var d = JSON.parse(fs.readFileSync(path.join(DATA_DIR, "data.json"), "utf8"));
     var users = (d.users || []).map(function(u) { return { id: u.id, username: u.username, email: u.email, role: u.role, created_at: u.created_at }; });
     return json(users);
   }
@@ -422,7 +423,7 @@ if (u.pathname === "/api/users" && method === "GET") {
   // ================== 网站设置 ==================
   if (u.pathname === "/api/settings" && method === "GET") {
     try {
-      var d = JSON.parse(fs.readFileSync(path.join(DIR, "data.json"), "utf8"));
+      var d = JSON.parse(fs.readFileSync(path.join(DATA_DIR, "data.json"), "utf8"));
       var s = d.settings || { site_name: "白君的俱乐部", site_logo: "", site_logo_url: "", site_description: "专业游戏服务", site_video_url: "", site_music_url: "" };
       return json(s);
     } catch(e) { return json({ error: e.message }, 500); }
@@ -431,7 +432,7 @@ if (u.pathname === "/api/users" && method === "GET") {
     var au = getAuthUser(req); if (!au || au.role !== "admin") return json({ error: "无权限" }, 403);
     var body = await parseJSON(req); if (!body) return json({ error: "请求格式错误" }, 400);
     try {
-      var d = JSON.parse(fs.readFileSync(path.join(DIR, "data.json"), "utf8"));
+      var d = JSON.parse(fs.readFileSync(path.join(DATA_DIR, "data.json"), "utf8"));
       if (!d.settings) d.settings = {};
       if (body.site_name !== undefined) d.settings.site_name = body.site_name;
       if (body.site_logo !== undefined) d.settings.site_logo = body.site_logo;
@@ -439,7 +440,7 @@ if (u.pathname === "/api/users" && method === "GET") {
       if (body.site_description !== undefined) d.settings.site_description = body.site_description;
       if (body.site_video_url !== undefined) d.settings.site_video_url = body.site_video_url;
       if (body.site_music_url !== undefined) d.settings.site_music_url = body.site_music_url;
-      fs.writeFileSync(path.join(DIR, "data.json"), JSON.stringify(d, null, 2), "utf8");
+      fs.writeFileSync(path.join(DATA_DIR, "data.json"), JSON.stringify(d, null, 2), "utf8");
       if (db.clearJSONCache) db.clearJSONCache();
       sseBroadcast("settings_update", d.settings);
       return json(d.settings);
