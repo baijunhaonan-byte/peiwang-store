@@ -454,6 +454,10 @@ json({ error: "接口未找到" }, 404);
 }
 
 // ======================== 服务器启动 ========================
+// // 确保上传目录存在
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, "http://" + (req.headers.host || "localhost"));
   if (u.pathname.startsWith("/api/")) return handleAPI(req, res);
