@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const DIR = __dirname;
 const DATA_DIR = process.env.DATA_DIR || DIR;
-path.join(DATA_DIR, "data.json");
+const DATA_FILE = path.join(DATA_DIR, "data.json");
 
 try { require.resolve("better-sqlite3"); var SQLite = true; } catch { SQLite = false; }
 
