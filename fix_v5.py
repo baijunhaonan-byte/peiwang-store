@@ -1,0 +1,21 @@
+﻿SQ = chr(39)
+DQ = chr(34)
+with open('admin/js/users.js','r',encoding='utf-8') as f: c = f.read()
+rl = chr(36229)+chr(32423)+chr(31649)+chr(29702)+chr(21592)
+al = chr(36816)+chr(33829)+chr(31649)+chr(29702)+chr(21592)
+cl = chr(23458)+chr(25143)
+la = chr(27491)+chr(24120)
+ld = chr(24050)+chr(31105)+chr(29992)
+
+# Role label - build piece by piece
+parts = []
+parts.append(' + ')
+parts.append(chr(123))  # {
+parts.append(SQ + 'super_admin' + SQ + ':' + SQ + rl + SQ + ',' + SQ + 'admin' + SQ + ':' + SQ + al + SQ + ',' + SQ + 'customer' + SQ + ':' + SQ + cl + SQ)
+parts.append(chr(125))  # }
+parts.append('[u.role] || u.role) + ')
+new = ''.join(parts)
+c = c.replace(' + u.role + ', new)
+
+open('admin/js/users.js','w',encoding='utf-8').write(c)
+print('3 done')

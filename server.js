@@ -412,6 +412,8 @@ async function handleAPI(req, res) {
     if (body.username) fields.username = body.username;
     if (body.email !== undefined) fields.email = body.email;
     if (body.password) fields.password = body.password;
+    if (body.role !== undefined && ['super_admin','admin','customer'].indexOf(body.role) >= 0) fields.role = body.role;
+    if (body.status !== undefined && ['active','disabled'].indexOf(body.status) >= 0) fields.status = body.status;
     var result = db.updateUser(uid, fields);
     if (!result) return json({ error: "用户不存在" }, 404);
     return json(result);

@@ -9,16 +9,17 @@ async function loadUsers() {
     });
     if (!r.ok) { container.innerHTML = '<div class="empty-state">加载失败</div>'; return; }
     var users = await r.json();
-    var html = '<div class="table-container"><table><thead><tr><th>ID</th><th>用户名</th><th>邮箱</th><th>角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead><tbody>';
+    var html = '<div class="table-container"><table><thead><tr><th>ID</th><th>用户名</th><th>邮箱</th><th>角色</th><th>创建时间</th><th>操作</th></tr></thead><tbody>';
     for (var i = 0; i < users.length; i++) {
       var u = users[i];
       var time = u.created_at ? new Date(u.created_at).toLocaleString('zh-CN') : '-';
+      var name = escapeHtml(u.username);
       var email = escapeHtml(u.email || '-');
-      html += '<tr><td>' + u.id + '</td><td>' + name + '</td><td>' + email + '</td><td>' + {'super_admin':'超级管理员','admin':'运营管理员','customer':'客户'}[u.role] || u.role) + '</td><td>' + (u.status === 'disabled' ? '<span style="color:red">已禁用</span>' : '<span style="color:green">正常</span>') + '</td><td>' + time + '</td>';
+      html += '<tr><td>' + u.id + '</td><td>' + name + '</td><td>' + email + '</td><td>' + u.role + '</td><td>' + time + '</td>';
       html += '<td>';
-        html += '<button class="btn btn-primary btn-sm" onclick="showEditUser(' + u.id + ',\'' + escapeHtml(u.username) + '\',\'' + escapeHtml(u.email || '') + '\',\'' + u.role + '\',\'' + (u.status || 'active') + '\')">编辑</button>';
-        if (u.role !== 'super_admin') {
-          html += ' <button class="btn btn-danger btn-sm" onclick="confirmDeleteUser(' + u.id + ',\'' + escapeHtml(u.username) + '\')">删除</button>';
+        html += '<button class="btn btn-primary btn-sm" onclick="showEditUser(' + u.id + ',\'' + name + '\',\'' + email + '\')">编辑</button>';
+        if (u.role !== 'admin') {
+          html += ' <button class="btn btn-danger btn-sm" onclick="confirmDeleteUser(' + u.id + ',\'' + name + '\')">删除</button>';
         } else {
           html += ' <span style="color:#999;font-size:12px;">管理员</span>';
         }
@@ -60,7 +61,7 @@ async function doDeleteUser(id) {
 // ======================== 编辑用户 ========================
 var editingUserId = null;
 
-function showEditUser(id, username, email, role, status) {
+function showEditUser(id, username, email) {
   editingUserId = id;
   document.getElementById('modal-title').textContent = '编辑用户 - ' + escapeHtml(username);
   var body = '';
@@ -80,12 +81,10 @@ async function saveEditUser() {
   var username = document.getElementById('edit-username').value.trim();
   var email = document.getElementById('edit-email').value.trim();
   var password = document.getElementById('edit-password').value;
-  var role = document.getElementById('edit-role').value;
-  var status = document.getElementById('edit-status').value;
   var errEl = document.getElementById('edit-error');
   if (!username) { errEl.textContent = '用户名不能为空'; errEl.classList.remove('hidden'); return; }
   errEl.classList.add('hidden');
-  var data = { username: username, email: email, role: role, status: status };
+  var data = { username: username, email: email };
   if (password) data.password = password;
   try {
     var r = await fetch('/api/users/' + editingUserId, {
