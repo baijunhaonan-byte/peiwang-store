@@ -771,7 +771,8 @@ async function saveSettings() {
     site_name: document.getElementById('set-name').value.trim(),
     site_description: document.getElementById('set-desc').value.trim(),
     site_video_url: document.getElementById('set-video-url').value,
-    site_music_url: document.getElementById('set-music-url').value
+    site_music_url: document.getElementById('set-music-url').value,
+      site_login_bg_url: document.getElementById('set-login-bg-url').value
   };
   try {
     var r = await fetch('/api/settings', {
@@ -796,4 +797,25 @@ async function saveSettings() {
 
 
 
-function closeForm(id){var el=document.getElementById(id);if(el)el.remove();}
+function uploadLoginBg() {
+    var fileInput = document.getElementById('login-bg-file-input');
+    var file = fileInput.files[0];
+    if (!file) return;
+    var formData = new FormData();
+    formData.append('image', file);
+    try {
+      var r = await fetch('/api/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + adminToken }, body: formData });
+      if (r.ok) {
+        var data = await r.json();
+        document.getElementById('set-login-bg-url').value = data.url;
+        document.getElementById('login-bg-preview').innerHTML = '<img src="' + data.url + '" style="width:100%;height:100%;object-fit:cover;">';
+        notify('图片已上传');
+      } else { notify('上传失败'); }
+    } catch(e) { notify('网络错误'); }
+    fileInput.value = '';
+  }
+  function clearLoginBg() {
+    document.getElementById('set-login-bg-url').value = '';
+    document.getElementById('login-bg-preview').innerHTML = '未设置';
+  }
+  function closeForm(id){var el=document.getElementById(id);if(el)el.remove();}

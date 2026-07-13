@@ -73,7 +73,7 @@ function showEditUser(id, username, email, role, status) {
   body += '<label><span>角色</span><select id="edit-role">';
   body += opt('customer', '客户', role === 'customer');
   body += opt('admin', '运营管理员', role === 'admin');
-  body += opt('super_admin', '超级管理员', role === 'super_admin');
+
   body += '</select></label>';
   body += '<label><span>状态</span><select id="edit-status">';
   body += opt('active', '正常', status !== 'disabled');

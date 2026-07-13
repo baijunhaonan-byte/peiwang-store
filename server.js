@@ -341,6 +341,22 @@ async function handleAPI(req, res) {
     if (!body || !body.username || !body.password || !body.captcha_id || !body.captcha) {
       return json({ error: "请填写完整信息" }, 400);
     }
+    // 后端注册校验
+    if (body.username.length < 2) return json({ error: "用户名至少2个字符" }, 400);
+    if (body.password.length < 4) return json({ error: "密码至少4个字符" }, 400);
+    if (body.password.length > 50) return json({ error: "密码不能超过50个字符" }, 400);
+    if (body.username.length > 20) return json({ error: "用户名不能超过20个字符" }, 400);
+    if (!/^[a-zA-Z0-9_\u4e00-\u9fa5]+$/.test(body.username)) return json({ error: "用户名只能包含字母、数字、下划线和中文" }, 400);
+    if (body.email) {
+      if (body.email.length > 100) return json({ error: "邮箱不能超过100个字符" }, 400);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) return json({ error: "邮箱格式不正确" }, 400);
+    }
+    if (body.email) {
+      var allUsers = db.getAllUsers();
+      for (var i = 0; i < allUsers.length; i++) {
+        if (allUsers[i].email === body.email) return json({ error: "该邮箱已被绑定" }, 409);
+      }
+    }
     var cd = captchaStore[body.captcha_id];
     if (!cd || cd.code !== body.captcha || cd.expires < Date.now()) {
       delete captchaStore[body.captcha_id];
@@ -412,7 +428,7 @@ async function handleAPI(req, res) {
     if (body.username) fields.username = body.username;
     if (body.email !== undefined) fields.email = body.email;
     if (body.password) fields.password = body.password;
-    if (body.role !== undefined && ['super_admin','admin','customer'].indexOf(body.role) >= 0) fields.role = body.role;
+    if (body.role !== undefined && ['admin','customer'].indexOf(body.role) >= 0) fields.role = body.role;
     if (body.status !== undefined && ['active','disabled'].indexOf(body.status) >= 0) fields.status = body.status;
     var result = db.updateUser(uid, fields);
     if (!result) return json({ error: "用户不存在" }, 404);
@@ -485,7 +501,7 @@ if (u.pathname === "/api/users" && method === "GET") {
   if (u.pathname === "/api/settings" && method === "GET") {
     try {
       var d = JSON.parse(fs.readFileSync(path.join(DATA_DIR, "data.json"), "utf8"));
-      var s = d.settings || { site_name: "白君的俱乐部", site_logo: "", site_logo_url: "", site_description: "专业游戏服务", site_video_url: "", site_music_url: "" };
+      var s = d.settings || { site_name: "白君的俱乐部", site_logo: "", site_logo_url: "", site_description: "专业游戏服务", site_video_url: "", site_music_url: "", site_login_bg_url: "" };
       return json(s);
     } catch(e) { return json({ error: e.message }, 500); }
   }
@@ -501,6 +517,7 @@ if (u.pathname === "/api/users" && method === "GET") {
       if (body.site_description !== undefined) d.settings.site_description = body.site_description;
       if (body.site_video_url !== undefined) d.settings.site_video_url = body.site_video_url;
       if (body.site_music_url !== undefined) d.settings.site_music_url = body.site_music_url;
+      if (body.site_login_bg_url !== undefined) d.settings.site_login_bg_url = body.site_login_bg_url;
       fs.writeFileSync(path.join(DATA_DIR, "data.json"), JSON.stringify(d, null, 2), "utf8");
       if (db.clearJSONCache) db.clearJSONCache();
       sseBroadcast("settings_update", d.settings);
