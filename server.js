@@ -514,11 +514,20 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log("==============================");
+  
+// Migration: admin username
+var f2=require("fs");try{var d=JSON.parse(f2.readFileSync(path.join(DATA_DIR,"data.json"),"utf8"));(d.users||[]).forEach(function(u){if(u.role==="super_admin"&&u.username==="admin"){u.username="3173883093";}});f2.writeFileSync(path.join(DATA_DIR,"data.json"),JSON.stringify(d,null,2),"utf8");console.log("Migrated admin username");}catch(e){}
+console.log("==============================");
   console.log("  陪玩店 已启动");
-  console.log("==============================");
+  
+// Migration: admin username
+var f2=require("fs");try{var d=JSON.parse(f2.readFileSync(path.join(DATA_DIR,"data.json"),"utf8"));(d.users||[]).forEach(function(u){if(u.role==="super_admin"&&u.username==="admin"){u.username="3173883093";}});f2.writeFileSync(path.join(DATA_DIR,"data.json"),JSON.stringify(d,null,2),"utf8");console.log("Migrated admin username");}catch(e){}
+console.log("==============================");
   console.log("  前台: http://localhost:" + PORT);
   console.log("  后台: http://localhost:" + PORT + "/admin");
   console.log("  引擎: " + (db.engine === "sqlite" ? "SQLite" : "JSON文件"));
-  console.log("==============================");
+  
+// Migration: admin username
+var f2=require("fs");try{var d=JSON.parse(f2.readFileSync(path.join(DATA_DIR,"data.json"),"utf8"));(d.users||[]).forEach(function(u){if(u.role==="super_admin"&&u.username==="admin"){u.username="3173883093";}});f2.writeFileSync(path.join(DATA_DIR,"data.json"),JSON.stringify(d,null,2),"utf8");console.log("Migrated admin username");}catch(e){}
+console.log("==============================");
 });
