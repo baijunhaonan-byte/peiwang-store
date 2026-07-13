@@ -419,7 +419,7 @@ async function handleAPI(req, res) {
 
 if (u.pathname === "/api/users" && method === "GET") {
     var au = getAuthUser(req);
-    if (!au || au.role !== "admin") return json({ error: "无权限" }, 403);
+    if (!requireRole(au, ["super_admin", "admin"])) return json({ error: "无权限" }, 403);
     var d = JSON.parse(fs.readFileSync(path.join(DATA_DIR, "data.json"), "utf8"));
     var users = (d.users || []).map(function(u) { return { id: u.id, username: u.username, email: u.email, role: u.role, created_at: u.created_at }; });
     return json(users);
@@ -427,7 +427,7 @@ if (u.pathname === "/api/users" && method === "GET") {
   var delU = u.pathname.match(/^\/api\/users\/(\d+)$/);
   if (delU && method === "DELETE") {
     var au = getAuthUser(req);
-    if (!au || au.role !== "admin") return json({ error: "无权限" }, 403);
+    if (!requireRole(au, ["super_admin", "admin"])) return json({ error: "无权限" }, 403);
     var uid = parseInt(delU[1]);
     if (uid === au.id) return json({ error: "不能删除自己" }, 400);
     var delUser = db.getUserById(uid);
