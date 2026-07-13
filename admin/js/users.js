@@ -14,7 +14,7 @@ async function loadUsers() {
       var u = users[i];
       var time = u.created_at ? new Date(u.created_at).toLocaleString('zh-CN') : '-';
       var email = escapeHtml(u.email || '-');
-      html += '<tr><td>' + u.id + '</td><td>' + escapeHtml(u.username) + '</td><td>' + email + '</td><td>' + {'super_admin':'超级管理员','admin':'运营管理员','customer':'客户'}[u.role] || u.role) + '</td><td>' + (u.status === 'disabled' ? '<span style="color:red">已禁用</span>' : '<span style="color:green">正常</span>') + '</td><td>' + time + '</td>';
+      html += '<tr><td>' + u.id + '</td><td>' + escapeHtml(u.username) + '</td><td>' + email + '</td><td>' + ({'super_admin':'超级管理员','admin':'运营管理员','customer':'客户'}[u.role] || u.role) + '</td><td>' + (u.status === 'disabled' ? '<span style="color:red">已禁用</span>' : '<span style="color:green">正常</span>') + '</td><td>' + time + '</td>';
       html += '<td>';
         html += '<button class="btn btn-primary btn-sm" onclick="showEditUser(' + u.id + ',\'' + escapeHtml(u.username) + '\',\'' + escapeHtml(u.email || '') + '\',\'' + u.role + '\',\'' + (u.status || 'active') + '\')">编辑</button>';
         if (u.role !== 'super_admin') {
