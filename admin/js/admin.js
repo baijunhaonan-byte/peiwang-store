@@ -797,7 +797,7 @@ async function saveSettings() {
 
 
 
-function uploadLoginBg() {
+async function uploadLoginBg() {
     var fileInput = document.getElementById('login-bg-file-input');
     var file = fileInput.files[0];
     if (!file) return;
