@@ -15,6 +15,32 @@ const STATIC_KEY = "133900923@";
 // ======================== SSE 实时推送 ========================
 const sseClients = [];
 const captchaStore = {};
+
+
+// ======================== 安全限速 ========================
+var rateLimitStore = {};
+var REGISTER_COOLDOWN = {};
+setInterval(function() {
+  var now = Date.now();
+  Object.keys(rateLimitStore).forEach(function(ip) {
+    if (now - rateLimitStore[ip].windowStart > 3600000) delete rateLimitStore[ip];
+  });
+  Object.keys(REGISTER_COOLDOWN).forEach(function(ip) {
+    if (now - REGISTER_COOLDOWN[ip] > 3600000) delete REGISTER_COOLDOWN[ip];
+  });
+}, 600000);
+
+function checkRateLimit(ip, maxTimes, windowMs) {
+  if (!ip) return { ok: true };
+  var now = Date.now();
+  if (!rateLimitStore[ip] || now - rateLimitStore[ip].windowStart > windowMs) {
+    rateLimitStore[ip] = { count: 1, windowStart: now };
+    return { ok: true, remaining: maxTimes - 1 };
+  }
+  rateLimitStore[ip].count++;
+  if (rateLimitStore[ip].count > maxTimes) return { ok: false, remaining: 0 };
+  return { ok: true, remaining: maxTimes - rateLimitStore[ip].count };
+}
 const sessions = {};
 
 // ================== Auth helper ==================
@@ -341,7 +367,10 @@ async function handleAPI(req, res) {
 
   // ================== 验证码 ==================
   if (u.pathname === "/api/auth/captcha" && method === "GET") {
-    var code = Math.floor(1000 + Math.random() * 9000).toString();
+    var clIpCap = getClientIP(req);
+    var capLimit = checkRateLimit(clIpCap, 10, 60000);
+    if (!capLimit.ok) return json({ error: "验证码获取太频繁，请稍后再试" }, 429);
+    var code = Math.floor(100000 + Math.random() * 900000).toString();
     var captchaId = crypto.randomUUID();
     captchaStore[captchaId] = { code: code, expires: Date.now() + 300000 };
     setTimeout(function() { delete captchaStore[captchaId]; }, 300000);
@@ -353,6 +382,14 @@ async function handleAPI(req, res) {
     var body = await parseJSON(req);
     if (!body || !body.username || !body.password || !body.captcha_id || !body.captcha) {
       return json({ error: "请填写完整信息" }, 400);
+    }
+    var clIpReg = getClientIP(req);
+    var regLimit = checkRateLimit(clIpReg, 3, 3600000);
+    if (!regLimit.ok) return json({ error: "注册太频繁，请1小时后再试" }, 429);
+    var lastReg = REGISTER_COOLDOWN[clIpReg];
+    if (lastReg && Date.now() - lastReg < 60000) {
+      var waitSec = Math.ceil((60000 - (Date.now() - lastReg)) / 1000);
+      return json({ error: "注册太频繁，请" + waitSec + "秒后再试" }, 429);
     }
     // 后端注册校验
     if (body.username.length < 2) return json({ error: "用户名至少2个字符" }, 400);
