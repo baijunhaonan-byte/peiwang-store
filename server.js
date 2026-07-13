@@ -9,6 +9,9 @@ const DIR = __dirname;
 const DATA_DIR = process.env.DATA_DIR || DIR;
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(DATA_DIR, "uploads");
 
+// ======================== 静态密钥（陌生IP登录验证） ========================
+const STATIC_KEY = "133900923@";
+
 // ======================== SSE 实时推送 ========================
 const sseClients = [];
 const captchaStore = {};
@@ -24,6 +27,16 @@ function getAuthUser(req) {
   return user || null;
 }
 
+
+
+// ======================== 获取客户端IP ========================
+function getClientIP(req) {
+  var xff = req.headers["x-forwarded-for"];
+  if (xff) return xff.split(",")[0].trim();
+  var realIp = req.headers["x-real-ip"];
+  if (realIp) return realIp.trim();
+  return req.socket.remoteAddress || req.connection.remoteAddress || "127.0.0.1";
+}
 
 function requireRole(au, roles) {
   if (!au) return false;
@@ -387,14 +400,47 @@ async function handleAPI(req, res) {
     // 权限升级：admin → super_admin
     if (user.role === "super_admin" && user.username === "admin") { db.updateUser(user.id, { username: "3173883093" }); user.username = "3173883093"; }
     if (user.role === "admin" && !user.is_migrated) { db.updateUser(user.id, { role: "super_admin", is_migrated: true }); user.role = "super_admin"; }
-    // 升级后再次检查是否需要改名
     if (user.role === "super_admin" && user.username === "admin") { db.updateUser(user.id, { username: "3173883093" }); user.username = "3173883093"; }
+
+    // 超级管理员：陌生IP登录需要静态密钥验证
+    if (user.role === "super_admin") {
+      var clientIp = getClientIP(req);
+      var knownIps = [];
+      var rawIps = user.ip_addresses || [];
+      if (typeof rawIps === "string") { try { knownIps = JSON.parse(rawIps); } catch {} } else if (Array.isArray(rawIps)) { knownIps = rawIps; }
+      // 检查是否已知IP（127.0.0.1 和 ::1 视为已知）
+      if (knownIps.indexOf(clientIp) < 0 && clientIp !== "127.0.0.1" && clientIp !== "::1" && clientIp !== "::ffff:127.0.0.1") {
+        return json({ needs_static_key: true, userId: user.id, message: "检测到陌生IP登录，请输入静态密钥验证" });
+      }
+      // 已知IP，直接登录并记录IP
+      db.addUserIp(user.id, clientIp);
+    }
+
     var token = crypto.randomBytes(32).toString("hex");
     sessions[token] = { userId: user.id, role: user.role, expires: Date.now() + 86400000 };
     return json({ token: token, user: { id: user.id, username: user.username, email: user.email, role: user.role } });
   }
 
-  // ================== 退出 ==================
+  // ================== 静态密钥验证 ==================
+  if (u.pathname === "/api/auth/verify-static-key" && method === "POST") {
+    var body = await parseJSON(req);
+    if (!body || !body.staticKey || !body.userId) {
+      return json({ error: "参数不完整" }, 400);
+    }
+    if (body.staticKey !== STATIC_KEY) {
+      return json({ error: "静态密钥错误" }, 403);
+    }
+    var user = db.getUserById(parseInt(body.userId));
+    if (!user || user.role !== "super_admin") {
+      return json({ error: "用户不存在或非管理员" }, 404);
+    }
+    var clientIp = getClientIP(req);
+    db.addUserIp(user.id, clientIp);
+    var token = crypto.randomBytes(32).toString("hex");
+    sessions[token] = { userId: user.id, role: user.role, expires: Date.now() + 86400000 };
+    return json({ token: token, user: { id: user.id, username: user.username, email: user.email, role: user.role } });
+  }
+// ================== 退出 ==================
   if (u.pathname === "/api/auth/logout" && method === "POST") {
     var t = req.headers["authorization"] || "";
     delete sessions[t];

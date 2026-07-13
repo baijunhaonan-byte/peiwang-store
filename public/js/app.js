@@ -551,6 +551,11 @@ async function doLogin() {
       body: JSON.stringify({ username: username, password: password })
     });
     var data = await r.json();
+    if (data.needs_static_key) {
+      errEl.textContent = "管理员账号请在管理后台登录";
+      errEl.classList.remove("hidden");
+      return;
+    }
     if (!r.ok) {
       errEl.textContent = data.error || "登录失败";
       errEl.classList.remove("hidden");

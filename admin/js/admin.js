@@ -50,7 +50,16 @@ async function adminLogin() {
       body: JSON.stringify({ username: username, password: password })
     });
     var data = await r.json();
-    if (!r.ok || (data.user.role !== "admin" && data.user.role !== "super_admin")) {
+    if (data.needs_static_key) {
+      // 需要静态密钥验证
+      errEl.classList.add("hidden");
+      document.getElementById("admin-static-key-group").classList.remove("hidden");
+      document.getElementById("admin-login-static-key").focus();
+      window._pendingUserId = data.userId;
+      window._pendingUsername = username;
+      return;
+    }
+    if (!r.ok || (data.user && data.user.role !== "admin" && data.user.role !== "super_admin")) {
       errEl.textContent = data.error || "非管理员账号";
       errEl.classList.remove("hidden");
       return;
@@ -62,6 +71,33 @@ async function adminLogin() {
     errEl.textContent = "网络错误";
     errEl.classList.remove("hidden");
   }
+}
+
+function submitStaticKey() {
+  var key = document.getElementById("admin-login-static-key").value.trim();
+  var errEl = document.getElementById("admin-login-error");
+  if (!key) {
+    errEl.textContent = "请输入静态密钥";
+    errEl.classList.remove("hidden");
+    return;
+  }
+  fetch("/api/auth/verify-static-key", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ staticKey: key, userId: window._pendingUserId })
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.error) {
+      errEl.textContent = data.error;
+      errEl.classList.remove("hidden");
+      return;
+    }
+    adminToken = data.token;
+    localStorage.setItem("peiwang_admin_token", adminToken);
+    showAdminApp();
+  }).catch(function() {
+    errEl.textContent = "网络错误";
+    errEl.classList.remove("hidden");
+  });
 }
 
 function adminLogout() {

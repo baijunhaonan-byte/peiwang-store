@@ -289,7 +289,7 @@ function createUser(username, password, email, role, status) {
   if (SQLite) {
     try {
       var r = db.prepare('INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, ?)').run(username, hash, email || '', role || 'customer');
-      var u = db.prepare('SELECT id, username, email, role, created_at FROM users WHERE id = ?').get(r.lastInsertRowid);
+      var u = db.prepare('SELECT id, username, email, role, status, ip_addresses, created_at FROM users WHERE id = ?').get(r.lastInsertRowid);
       return u;
     } catch(e) {
       if (e.message.indexOf('UNIQUE') >= 0) return null;
@@ -337,7 +337,7 @@ function initUsers() {
 }
 
 if (SQLite) {
-  db.exec('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password TEXT NOT NULL, email TEXT DEFAULT "", role TEXT DEFAULT "customer", created_at TEXT DEFAULT (datetime("now")))');
+  db.exec('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password TEXT NOT NULL, email TEXT DEFAULT "", role TEXT DEFAULT "customer", status TEXT DEFAULT "active", ip_addresses TEXT DEFAULT "[]", created_at TEXT DEFAULT (datetime("now")))');
   initUsers();
 } else {
   (function ensureNextId() {
@@ -378,8 +378,8 @@ function deleteUser(id) {
 }
 
 function getAllUsers() {
-  if (SQLite) return db.prepare('SELECT id, username, email, role, created_at FROM users ORDER BY id').all();
-  return (getJSON().users || []).map(function(u) { return { id: u.id, username: u.username, email: u.email, role: u.role, status: u.status || "active", created_at: u.created_at }; });
+  if (SQLite) return db.prepare('SELECT id, username, email, role, status, ip_addresses, created_at FROM users ORDER BY id').all();
+  return (getJSON().users || []).map(function(u) { return { id: u.id, username: u.username, email: u.email, role: u.role, status: u.status || "active", ip_addresses: u.ip_addresses || [], created_at: u.created_at }; });
 }
 
 
@@ -461,4 +461,24 @@ function deleteConsumptionRecord(id) {
 
 function clearJSONCache() { jsonData = null; }
 
-module.exports = { engine, getCategories, getMenuItems, getMenuItem, createMenuItem, updateMenuItem, deleteMenuItem, createOrder, getOrders, updateOrderStatus, deleteOrder, getChatMessages, addChatMessage, getConsumptionRecords, createConsumptionRecord, updateConsumptionRecord, deleteConsumptionRecord, createUser, getUserByUsername, getUserById, verifyPassword, updateUser, deleteUser, getAllUsers , updateCategory , updateCategoryImage , clearJSONCache };
+function addUserIp(userId, ip) {
+  if (SQLite) {
+    var u = db.prepare('SELECT ip_addresses FROM users WHERE id = ?').get(userId);
+    if (!u) return;
+    var ips = [];
+    try { ips = JSON.parse(u.ip_addresses || "[]"); } catch {}
+    if (ips.indexOf(ip) < 0) {
+      ips.push(ip);
+      db.prepare('UPDATE users SET ip_addresses = ? WHERE id = ?').run(JSON.stringify(ips), userId);
+    }
+    return;
+  }
+  var d = getJSON();
+  var u = d.users.find(function(x) { return x.id === userId; });
+  if (!u) return;
+  if (!u.ip_addresses) u.ip_addresses = [];
+  if (u.ip_addresses.indexOf(ip) < 0) {
+    u.ip_addresses.push(ip);
+    saveJSON();
+  }
+}module.exports = { engine, getCategories, getMenuItems, getMenuItem, createMenuItem, updateMenuItem, deleteMenuItem, createOrder, getOrders, updateOrderStatus, deleteOrder, getChatMessages, addChatMessage, getConsumptionRecords, createConsumptionRecord, updateConsumptionRecord, deleteConsumptionRecord, createUser, getUserByUsername, getUserById, verifyPassword, updateUser, deleteUser, getAllUsers , updateCategory , updateCategoryImage , clearJSONCache, addUserIp };
