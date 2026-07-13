@@ -169,7 +169,7 @@ async function handleAPI(req, res) {
     }
 
     // 新增菜品
-    if (u.pathname === "/api/menu-items" && method === "POST") { var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
+    if (u.pathname === "/api/menu-items" && method === "POST") { var au = getAuthUser(req); if (!requireRole(au, ["super_admin","admin"])) return json({ error: "无权限" }, 403);
       const body = req.headers["content-type"]?.includes("multipart")
         ? await parseMultipart(req) : await parseJSON(req);
       if (!body || !body.name || !body.price) {
@@ -184,7 +184,7 @@ async function handleAPI(req, res) {
     }
 
     // 修改菜品
-    if (menuId && method === "PUT") { var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
+    if (menuId && method === "PUT") { var au = getAuthUser(req); if (!requireRole(au, ["super_admin","admin"])) return json({ error: "无权限" }, 403);
       const body = req.headers["content-type"]?.includes("multipart")
         ? await parseMultipart(req) : await parseJSON(req);
       if (!body) return json({ error: "请求格式错误" }, 400);
@@ -201,7 +201,7 @@ async function handleAPI(req, res) {
     }
 
     // 删除菜品
-    if (menuId && method === "DELETE") { var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
+    if (menuId && method === "DELETE") { var au = getAuthUser(req); if (!requireRole(au, ["super_admin","admin"])) return json({ error: "无权限" }, 403);
       db.deleteMenuItem(parseInt(menuId));
       sseBroadcast("menu_update", { type: "delete", id: parseInt(menuId) });
       return json({ success: true });
@@ -301,7 +301,7 @@ async function handleAPI(req, res) {
     
   
   // ================== 上传分类图片 ==================
-  if (u.pathname.match(/^\/api\/categories\/(\d+)\/image$/) && method === "POST") { var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
+  if (u.pathname.match(/^\/api\/categories\/(\d+)\/image$/) && method === "POST") { var au = getAuthUser(req); if (!requireRole(au, ["super_admin","admin"])) return json({ error: "无权限" }, 403);
     var cid = parseInt(u.pathname.match(/^\/api\/categories\/(\d+)\/image$/)[1]);
     var body = await parseMultipart(req);
     if (!body || !body.image) return json({ error: "请上传图片" }, 400);
@@ -310,7 +310,7 @@ async function handleAPI(req, res) {
     sseBroadcast("menu_update", { type: "category_update", item: result });
     return json(result);
   }
-  if (u.pathname.match(/^\/api\/categories\/(\d+)$/) && method === "PUT") { var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
+  if (u.pathname.match(/^\/api\/categories\/(\d+)$/) && method === "PUT") { var au = getAuthUser(req); if (!requireRole(au, ["super_admin","admin"])) return json({ error: "无权限" }, 403);
     var body = await parseJSON(req);
     if (!body) return json({ error: "请求格式错误" }, 400);
     var cid = parseInt(u.pathname.match(/^\/api\/categories\/(\d+)$/)[1]);
@@ -396,7 +396,7 @@ async function handleAPI(req, res) {
   var putU = u.pathname.match(/^\/api\/users\/(\d+)$/);
   if (putU && method === "PUT") {
     var au = getAuthUser(req);
-    if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
+    if (!requireRole(au, ["super_admin","admin"])) return json({ error: "无权限" }, 403);
     var uid = parseInt(putU[1]);
     var body = await parseJSON(req);
     if (!body) return json({ error: "请求格式错误" }, 400);
@@ -434,12 +434,12 @@ if (u.pathname === "/api/users" && method === "GET") {
   
   // ================== 管理员账号管理（super_admin） ==================
   if (u.pathname === "/api/admin/users" && method === "GET") {
-    var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
+    var au = getAuthUser(req); if (!requireRole(au, ["super_admin","admin"])) return json({ error: "无权限" }, 403);
     var allUsers = db.getAllUsers();
     return json(allUsers);
   }
   if (u.pathname === "/api/admin/users" && method === "POST") {
-    var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
+    var au = getAuthUser(req); if (!requireRole(au, ["super_admin","admin"])) return json({ error: "无权限" }, 403);
     var body = await parseJSON(req);
     if (!body || !body.username || !body.password) return json({ error: "请填写用户名和密码" }, 400);
     var existing = db.getUserByUsername(body.username);
@@ -449,7 +449,7 @@ if (u.pathname === "/api/users" && method === "GET") {
   }
   var adminUserId = (u.pathname.match(/^\/api\/admin\/users\/(\d+)$/) || [])[1];
   if (adminUserId && method === "PUT") {
-    var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
+    var au = getAuthUser(req); if (!requireRole(au, ["super_admin","admin"])) return json({ error: "无权限" }, 403);
     var body = await parseJSON(req);
     if (!body) return json({ error: "请求格式错误" }, 400);
     var fields = {};
@@ -463,7 +463,7 @@ if (u.pathname === "/api/users" && method === "GET") {
     return json(result);
   }
   if (adminUserId && method === "DELETE") {
-    var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
+    var au = getAuthUser(req); if (!requireRole(au, ["super_admin","admin"])) return json({ error: "无权限" }, 403);
     var uid = parseInt(adminUserId);
     if (uid === au.id) return json({ error: "不能删除自己" }, 400);
     db.deleteUser(uid);
@@ -480,7 +480,7 @@ if (u.pathname === "/api/users" && method === "GET") {
     } catch(e) { return json({ error: e.message }, 500); }
   }
   if (u.pathname === "/api/settings" && method === "PUT") {
-    var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
+    var au = getAuthUser(req); if (!requireRole(au, ["super_admin","admin"])) return json({ error: "无权限" }, 403);
     var body = await parseJSON(req); if (!body) return json({ error: "请求格式错误" }, 400);
     try {
       var d = JSON.parse(fs.readFileSync(path.join(DATA_DIR, "data.json"), "utf8"));
