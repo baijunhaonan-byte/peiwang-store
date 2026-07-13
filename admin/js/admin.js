@@ -107,7 +107,7 @@ function switchTab(tabName) {
 
 // ======================== API 工具 ========================
 async function apiGet(url) {
-  var r = await fetch(url);
+  var r = await fetch(url, { headers: { "Authorization": "Bearer " + adminToken } });
   if (!r.ok) throw new Error("请求失败");
   return r.json();
 }
@@ -115,7 +115,7 @@ async function apiGet(url) {
 async function apiPost(url, data) {
   var r = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + adminToken },
     body: JSON.stringify(data)
   });
   if (!r.ok) throw new Error("请求失败");
@@ -125,7 +125,7 @@ async function apiPost(url, data) {
 async function apiPut(url, data) {
   var r = await fetch(url, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + adminToken },
     body: JSON.stringify(data)
   });
   if (!r.ok) throw new Error("请求失败");
@@ -133,7 +133,7 @@ async function apiPut(url, data) {
 }
 
 async function apiDelete(url) {
-  var r = await fetch(url, { method: "DELETE" });
+  var r = await fetch(url, { method: "DELETE", headers: { "Authorization": "Bearer " + adminToken } });
   if (!r.ok) throw new Error("请求失败");
   return r.json();
 }
