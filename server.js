@@ -20,7 +20,15 @@ function getAuthUser(req) {
   var s = sessions[t];
   if (!s || s.expires < Date.now()) { delete sessions[t]; return null; }
   var user = db.getUserById(s.userId);
+  if (user && user.status === "disabled") return null;
   return user || null;
+}
+
+
+function requireRole(au, roles) {
+  if (!au) return false;
+  if (au.status === "disabled") return false;
+  return roles.indexOf(au.role) >= 0;
 }
 
 function sseBroadcast(event, data) {
@@ -161,7 +169,7 @@ async function handleAPI(req, res) {
     }
 
     // 新增菜品
-    if (u.pathname === "/api/menu-items" && method === "POST") {
+    if (u.pathname === "/api/menu-items" && method === "POST") { var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
       const body = req.headers["content-type"]?.includes("multipart")
         ? await parseMultipart(req) : await parseJSON(req);
       if (!body || !body.name || !body.price) {
@@ -176,7 +184,7 @@ async function handleAPI(req, res) {
     }
 
     // 修改菜品
-    if (menuId && method === "PUT") {
+    if (menuId && method === "PUT") { var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
       const body = req.headers["content-type"]?.includes("multipart")
         ? await parseMultipart(req) : await parseJSON(req);
       if (!body) return json({ error: "请求格式错误" }, 400);
@@ -193,7 +201,7 @@ async function handleAPI(req, res) {
     }
 
     // 删除菜品
-    if (menuId && method === "DELETE") {
+    if (menuId && method === "DELETE") { var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
       db.deleteMenuItem(parseInt(menuId));
       sseBroadcast("menu_update", { type: "delete", id: parseInt(menuId) });
       return json({ success: true });
@@ -244,13 +252,13 @@ async function handleAPI(req, res) {
     }
 
     // 消费记录
-    if (u.pathname === "/api/consumption" && method === "GET") {
+    if (u.pathname === "/api/consumption" && method === "GET") { var au = getAuthUser(req); if (!requireRole(au, ["super_admin", "admin"])) return json({ error: "无权限" }, 403);
       return json(db.getConsumptionRecords());
     }
 
     
     // 新建消费记录
-    if (u.pathname === "/api/consumption" && method === "POST") {
+    if (u.pathname === "/api/consumption" && method === "POST") { var au = getAuthUser(req); if (!requireRole(au, ["super_admin", "admin"])) return json({ error: "无权限" }, 403);
       var body = await parseJSON(req);
       if (!body) return json({ error: "请求格式错误" }, 400);
       var rec = db.createConsumptionRecord(body);
@@ -293,7 +301,7 @@ async function handleAPI(req, res) {
     
   
   // ================== 上传分类图片 ==================
-  if (u.pathname.match(/^\/api\/categories\/(\d+)\/image$/) && method === "POST") {
+  if (u.pathname.match(/^\/api\/categories\/(\d+)\/image$/) && method === "POST") { var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
     var cid = parseInt(u.pathname.match(/^\/api\/categories\/(\d+)\/image$/)[1]);
     var body = await parseMultipart(req);
     if (!body || !body.image) return json({ error: "请上传图片" }, 400);
@@ -302,7 +310,7 @@ async function handleAPI(req, res) {
     sseBroadcast("menu_update", { type: "category_update", item: result });
     return json(result);
   }
-  if (u.pathname.match(/^\/api\/categories\/(\d+)$/) && method === "PUT") {
+  if (u.pathname.match(/^\/api\/categories\/(\d+)$/) && method === "PUT") { var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
     var body = await parseJSON(req);
     if (!body) return json({ error: "请求格式错误" }, 400);
     var cid = parseInt(u.pathname.match(/^\/api\/categories\/(\d+)$/)[1]);
@@ -341,6 +349,7 @@ async function handleAPI(req, res) {
     if (!user) return json({ error: "用户名已存在" }, 409);
     var token = crypto.randomBytes(32).toString("hex");
     sessions[token] = { userId: user.id, role: user.role, expires: Date.now() + 86400000 };
+    if (user.role === "admin" && !user.is_migrated) { db.updateUser(user.id, { role: "super_admin", is_migrated: true }); user.role = "super_admin"; }
     return json({ token: token, user: user }, 201);
   }
 
@@ -385,7 +394,7 @@ async function handleAPI(req, res) {
   var putU = u.pathname.match(/^\/api\/users\/(\d+)$/);
   if (putU && method === "PUT") {
     var au = getAuthUser(req);
-    if (!au || au.role !== "admin") return json({ error: "无权限" }, 403);
+    if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
     var uid = parseInt(putU[1]);
     var body = await parseJSON(req);
     if (!body) return json({ error: "请求格式错误" }, 400);
@@ -420,7 +429,47 @@ if (u.pathname === "/api/users" && method === "GET") {
 
 
 
-  // ================== 网站设置 ==================
+  
+  // ================== 管理员账号管理（super_admin） ==================
+  if (u.pathname === "/api/admin/users" && method === "GET") {
+    var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
+    var allUsers = db.getAllUsers();
+    return json(allUsers);
+  }
+  if (u.pathname === "/api/admin/users" && method === "POST") {
+    var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
+    var body = await parseJSON(req);
+    if (!body || !body.username || !body.password) return json({ error: "请填写用户名和密码" }, 400);
+    var existing = db.getUserByUsername(body.username);
+    if (existing) return json({ error: "用户名已存在" }, 409);
+    var newUser = db.createUser(body.username, body.password, body.email || "", body.role || "customer", "active");
+    return json(newUser, 201);
+  }
+  var adminUserId = (u.pathname.match(/^\/api\/admin\/users\/(\d+)$/) || [])[1];
+  if (adminUserId && method === "PUT") {
+    var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
+    var body = await parseJSON(req);
+    if (!body) return json({ error: "请求格式错误" }, 400);
+    var fields = {};
+    if (body.username) fields.username = body.username;
+    if (body.email !== undefined) fields.email = body.email;
+    if (body.password) fields.password = body.password;
+    if (body.role !== undefined) fields.role = body.role;
+    if (body.status !== undefined) fields.status = body.status;
+    var result = db.updateUser(parseInt(adminUserId), fields);
+    if (!result) return json({ error: "用户不存在" }, 404);
+    return json(result);
+  }
+  if (adminUserId && method === "DELETE") {
+    var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
+    var uid = parseInt(adminUserId);
+    if (uid === au.id) return json({ error: "不能删除自己" }, 400);
+    db.deleteUser(uid);
+    return json({ success: true });
+  }
+
+
+// ================== 网站设置 ==================
   if (u.pathname === "/api/settings" && method === "GET") {
     try {
       var d = JSON.parse(fs.readFileSync(path.join(DATA_DIR, "data.json"), "utf8"));
@@ -429,7 +478,7 @@ if (u.pathname === "/api/users" && method === "GET") {
     } catch(e) { return json({ error: e.message }, 500); }
   }
   if (u.pathname === "/api/settings" && method === "PUT") {
-    var au = getAuthUser(req); if (!au || au.role !== "admin") return json({ error: "无权限" }, 403);
+    var au = getAuthUser(req); if (!requireRole(au, ["super_admin"])) return json({ error: "无权限" }, 403);
     var body = await parseJSON(req); if (!body) return json({ error: "请求格式错误" }, 400);
     try {
       var d = JSON.parse(fs.readFileSync(path.join(DATA_DIR, "data.json"), "utf8"));

@@ -284,7 +284,7 @@ function getConsumptionRecords() {
 
 // ====================== 用户系统 ======================
 
-function createUser(username, password, email, role) {
+function createUser(username, password, email, role, status) {
   var hash = crypto.createHash('sha256').update(password).digest('hex');
   if (SQLite) {
     try {
@@ -367,7 +367,7 @@ function updateUser(id, fields) {
   if (fields.email !== undefined) d.users[idx].email = fields.email;
   if (fields.password) d.users[idx].password = crypto.createHash('sha256').update(fields.password).digest('hex');
   saveJSON();
-  return { id: d.users[idx].id, username: d.users[idx].username, email: d.users[idx].email, role: d.users[idx].role, created_at: d.users[idx].created_at };
+  return { id: d.users[idx].id, username: d.users[idx].username, email: d.users[idx].email, role: d.users[idx].role, status: d.users[idx].status || "active", created_at: d.users[idx].created_at };
 }
 
 function deleteUser(id) {
@@ -379,7 +379,7 @@ function deleteUser(id) {
 
 function getAllUsers() {
   if (SQLite) return db.prepare('SELECT id, username, email, role, created_at FROM users ORDER BY id').all();
-  return (getJSON().users || []).map(function(u) { return { id: u.id, username: u.username, email: u.email, role: u.role, created_at: u.created_at }; });
+  return (getJSON().users || []).map(function(u) { return { id: u.id, username: u.username, email: u.email, role: u.role, status: u.status || "active", created_at: u.created_at }; });
 }
 
 

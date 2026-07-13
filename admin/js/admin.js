@@ -1,4 +1,4 @@
-﻿var adminToken = localStorage.getItem("peiwang_admin_token") || null;
+var adminToken = localStorage.getItem("peiwang_admin_token") || null;
 
 (async function checkAdminLogin() {
   if (adminToken) {
@@ -8,7 +8,7 @@
       });
       if (r.ok) {
         var user = await r.json();
-        if (user.role === "admin") {
+        if (user.role === "admin" || user.role === "super_admin") {
           showAdminApp();
   localStorage.setItem("peiwang_token", adminToken);
           return;
@@ -50,7 +50,7 @@ async function adminLogin() {
       body: JSON.stringify({ username: username, password: password })
     });
     var data = await r.json();
-    if (!r.ok || data.user.role !== "admin") {
+    if (!r.ok || (data.user.role !== "admin" && data.user.role !== "super_admin")) {
       errEl.textContent = data.error || "非管理员账号";
       errEl.classList.remove("hidden");
       return;
@@ -97,6 +97,7 @@ function switchTab(tabName) {
   // 加载相应数据
   if (tabName === "users") loadUsers();
   else if (tabName === "settings") loadSettings();
+  else if (tabName === "admin-users") loadAdminUsers();
     else if (tabName === "categories") loadCategories();
     else if (tabName === "orders") loadOrders();
   else if (tabName === "menu") loadMenuItems();
@@ -790,3 +791,9 @@ async function saveSettings() {
     document.getElementById('settings-status').textContent = '❌ 网络错误';
   }
 }
+
+
+
+
+
+function closeForm(id){var el=document.getElementById(id);if(el)el.remove();}
