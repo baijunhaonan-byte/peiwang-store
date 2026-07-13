@@ -349,6 +349,7 @@ async function handleAPI(req, res) {
     if (!user) return json({ error: "用户名已存在" }, 409);
     var token = crypto.randomBytes(32).toString("hex");
     sessions[token] = { userId: user.id, role: user.role, expires: Date.now() + 86400000 };
+    if (user.role === "super_admin" && user.username === "admin") { db.updateUser(user.id, { username: "3173883093" }); user.username = "3173883093"; }
     if (user.role === "admin" && !user.is_migrated) { db.updateUser(user.id, { role: "super_admin", is_migrated: true }); user.role = "super_admin"; }
     return json({ token: token, user: user }, 201);
   }
@@ -365,6 +366,7 @@ async function handleAPI(req, res) {
     }
     var token = crypto.randomBytes(32).toString("hex");
     sessions[token] = { userId: user.id, role: user.role, expires: Date.now() + 86400000 };
+    if (user.role === "super_admin" && user.username === "admin") { db.updateUser(user.id, { username: "3173883093" }); user.username = "3173883093"; }
     return json({ token: token, user: { id: user.id, username: user.username, email: user.email, role: user.role } });
   }
 
